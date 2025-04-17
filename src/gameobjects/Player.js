@@ -10,11 +10,14 @@ export class Player extends Physics.Arcade.Image {
     bullets = null;
 
     constructor({scene}) {
-        super(scene, -190, 100, "player");
+        super(scene, scene.scale.width / 2, scene.scale.height - 100, "player");
         this.scene = scene;
         this.scene.add.existing(this);
         this.scene.physics.add.existing(this);
-
+        
+        // Add gravity to the player so it stays on the ground
+        this.setGravityY(300);
+        
         this.propulsion_fire = this.scene.add.sprite(this.x - 32, this.y, "propulsion-fire");
         this.propulsion_fire.play("fire");
 
@@ -27,53 +30,17 @@ export class Player extends Physics.Arcade.Image {
     }
 
     start() {
-        this.state = "start";
-        const propulsion_fires_trail = [];
-
-        // Effect to move the player from left to right
-        this.scene.tweens.add({
-            targets: this,
-            x: 200,
-            duration: 800,
-            delay: 1000,
-            ease: "Power2",
-            yoyo: false,
-            onUpdate: () => {
-                // Just a little trail FX
-                const propulsion = this.scene.add.sprite(this.x - 32, this.y, "propulsion-fire");
-                propulsion.play("fire");
-                propulsion_fires_trail.push(propulsion);
-            },
-            onComplete: () => {
-                // Destroy all the trail FX
-                propulsion_fires_trail.forEach((propulsion, i) => {
-                    this.scene.tweens.add({
-                        targets: propulsion,
-                        alpha: 0,
-                        scale: 0.5,
-                        duration: 200 + (i * 2),
-                        ease: "Power2",
-                        onComplete: () => {
-                            propulsion.destroy();
-                        }
-                    });
-                });
-
-                this.propulsion_fire.setPosition(this.x - 32, this.y);
-
-                // When all tween are finished, the player can move
-                this.state = "can_move";
-            }
-        });
+        this.state = "can_move";
+        this.propulsion_fire.setPosition(this.x - 32, this.y);
     }
 
     move(direction) {
         if(this.state === "can_move") {
-            if (direction === "up" && this.y - 10 > 0) {
-                this.y -= 5;
+            if (direction === "left" && this.x - 10 > 0) {
+                this.x -= 5;
                 this.updatePropulsionFire();
-            } else if (direction === "down" && this.y + 75 < this.scene.scale.height) {
-                this.y += 5;
+            } else if (direction === "right" && this.x + 75 < this.scene.scale.width) {
+                this.x += 5;
                 this.updatePropulsionFire();
             }
         }
