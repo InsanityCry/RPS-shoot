@@ -7,6 +7,7 @@ export class Player extends Physics.Arcade.Image {
     state = "waiting";
     scene = null;
     bullets = null;
+    moveSpeed = 200;
 
     constructor({scene}) {
         super(scene, scene.scale.width / 2, scene.scale.height - 100, "player");
@@ -14,8 +15,11 @@ export class Player extends Physics.Arcade.Image {
         this.scene.add.existing(this);
         this.scene.physics.add.existing(this);
         
-        // Add gravity to the player so it stays on the ground
+        // Configure physics body
         this.setGravityY(300);
+        this.setCollideWorldBounds(true);
+        this.setBounce(0);
+        this.body.setDrag(300, 0);
 
         // Bullets group to create pool
         this.bullets = this.scene.physics.add.group({
@@ -27,14 +31,19 @@ export class Player extends Physics.Arcade.Image {
 
     start() {
         this.state = "can_move";
+        // Enable fixed step physics to reduce movement lag
+        this.scene.physics.world.fixedStep = true;
     }
 
     move(direction) {
         if(this.state === "can_move") {
             if (direction === "left" && this.x - 10 > 0) {
-                this.x -= 5;
+                this.setVelocityX(-this.moveSpeed);
             } else if (direction === "right" && this.x + 75 < this.scene.scale.width) {
-                this.x += 5;
+                this.setVelocityX(this.moveSpeed);
+            } else {
+                // Decelerate when no direction is pressed
+                this.setVelocityX(0);
             }
         }
     }
@@ -50,8 +59,10 @@ export class Player extends Physics.Arcade.Image {
     }
 
     update() {
-        // Sinusoidal movement up and down up and down 2px
-        this.y += Math.sin(this.scene.time.now / 200) * 0.10;
+        // The sinusoidal movement is now handled by physics
+        // We can add a small vertical oscillation if needed
+        if (this.state === "can_move" && this.body.velocity.y === 0) {
+            this.y += Math.sin(this.scene.time.now / 200) * 0.10;
+        }
     }
-
 }
