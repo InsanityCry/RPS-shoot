@@ -5,7 +5,6 @@ export class Player extends Physics.Arcade.Image {
     
     // Player states: waiting, start, can_move
     state = "waiting";
-    propulsion_fire = null;
     scene = null;
     bullets = null;
 
@@ -17,9 +16,6 @@ export class Player extends Physics.Arcade.Image {
         
         // Add gravity to the player so it stays on the ground
         this.setGravityY(300);
-        
-        this.propulsion_fire = this.scene.add.sprite(this.x - 32, this.y, "propulsion-fire");
-        this.propulsion_fire.play("fire");
 
         // Bullets group to create pool
         this.bullets = this.scene.physics.add.group({
@@ -31,17 +27,14 @@ export class Player extends Physics.Arcade.Image {
 
     start() {
         this.state = "can_move";
-        this.propulsion_fire.setPosition(this.x - 32, this.y);
     }
 
     move(direction) {
         if(this.state === "can_move") {
             if (direction === "left" && this.x - 10 > 0) {
                 this.x -= 5;
-                this.updatePropulsionFire();
             } else if (direction === "right" && this.x + 75 < this.scene.scale.width) {
                 this.x += 5;
-                this.updatePropulsionFire();
             }
         }
     }
@@ -56,14 +49,9 @@ export class Player extends Physics.Arcade.Image {
         }
     }
 
-    updatePropulsionFire() {
-        this.propulsion_fire.setPosition(this.x - 32, this.y);
-    }
-
     update() {
         // Sinusoidal movement up and down up and down 2px
         this.y += Math.sin(this.scene.time.now / 200) * 0.10;
-        this.propulsion_fire.y = this.y;
     }
 
 }
