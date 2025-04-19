@@ -3,13 +3,12 @@ import { GameObjects, Math } from "phaser";
 export class Bullet extends GameObjects.Image
 {
     speed;
-    flame;
     end_direction = new Math.Vector2(0, 0);
 
     constructor(scene, x, y) {
         super(scene, x, y, "bullet");
         this.speed = Phaser.Math.GetSpeed(450, 1);
-        this.postFX.addBloom(0xffffff, 1, 1, 2, 1.2);
+        // Removed bloom effect
         // Default bullet (player bullet)
         this.name = "bullet";
     }
@@ -33,30 +32,10 @@ export class Bullet extends GameObjects.Image
 
     destroyBullet ()
     {
-        if (this.flame === undefined) {
-            // Create particles for flame
-            this.flame = this.scene.add.particles(this.x, this.y, 'flares',
-                {
-                    lifespan: 250,
-                    scale: { start: 1.5, end: 0, ease: 'sine.out' },
-                    speed: 200,
-                    advance: 500,
-                    frequency: 20,
-                    blendMode: 'ADD',
-                    duration: 100,
-                });
-                this.flame.setDepth(1);
-            // When particles are complete, destroy them
-            this.flame.once("complete", () => {
-                this.flame.destroy();
-            })
-        }
-
-        // Destroy bullets
+        // Simplified bullet destruction - no flame particles
         this.setActive(false);
         this.setVisible(false);
         this.destroy();
-
     }
 
     // Update bullet position and destroy if it goes off screen

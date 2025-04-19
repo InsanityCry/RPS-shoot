@@ -7,6 +7,7 @@ export class MainScene extends Scene {
     // enemy_blue = null;
     cursors = null;
     ground = null;
+    wasdKeys = null;
 
     points = 0;
 
@@ -16,7 +17,8 @@ export class MainScene extends Scene {
 
     init() {
         this.cameras.main.fadeIn(1000, 0, 0, 0);
-        this.scene.launch("MenuScene");
+        // Don't launch the menu scene anymore
+        // this.scene.launch("MenuScene");
 
         // Reset points
         this.points = 0;
@@ -41,6 +43,15 @@ export class MainScene extends Scene {
 
         // Cursor keys 
         this.cursors = this.input.keyboard.createCursorKeys();
+        
+        // WASD keys
+        this.wasdKeys = {
+            up: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+            down: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
+            left: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+            right: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+        };
+        
         this.cursors.space.on("down", () => {
             this.player.fire();
         });
@@ -72,14 +83,17 @@ export class MainScene extends Scene {
         });
         */
 
-        // This event comes from MenuScene
+        // Start the game automatically
+        this.scene.launch("HudScene");
+        this.player.start();
+        // this.enemy_blue.start();
+        
+        // Keep the event handler for backward compatibility
         this.game.events.on("start-game", () => {
             this.scene.stop("MenuScene");
             this.scene.launch("HudScene");
             this.player.start();
             // this.enemy_blue.start();
-
-            // timeout removed, we can add it back later if we want
         });
         
         this.physics.add.collider(this.player, this.groundBody);
@@ -89,11 +103,11 @@ export class MainScene extends Scene {
         this.player.update();
         // this.enemy_blue.update();
 
-        // Player movement entries - changed to horizontal
-        if (this.cursors.left.isDown) {
+        // Player movement using arrow keys or WASD
+        if (this.cursors.left.isDown || this.wasdKeys.left.isDown) {
             this.player.move("left");
         }
-        if (this.cursors.right.isDown) {
+        if (this.cursors.right.isDown || this.wasdKeys.right.isDown) {
             this.player.move("right");
         }
     }

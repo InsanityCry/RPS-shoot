@@ -45,7 +45,7 @@ export class Preloader extends Phaser.Scene {
         };
         this.cache.bitmapFont.add('knighthawks', Phaser.GameObjects.RetroFont.Parse(this, config));
 
-        // When all the assets are loaded go to the next scene
-        this.scene.start("SplashScene");
+        // When all the assets are loaded go to the main scene directly
+        this.scene.start("MainScene");
     }
 }
