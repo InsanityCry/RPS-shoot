@@ -2,7 +2,4 @@
 Indie Game Jam Project
 
 
-
-
-npm install
-npm run dev
+Built with LÖVE2D
