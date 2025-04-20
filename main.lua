@@ -13,7 +13,9 @@ function love.load()
       -- Left wall
       {x = 0, y = 0, width = wallThickness, height = screenHeight},
       -- Right wall
-      {x = screenWidth - wallThickness, y = 0, width = wallThickness, height = screenHeight}
+      {x = screenWidth - wallThickness, y = 0, width = wallThickness, height = screenHeight},
+      -- Platform
+      {x = screenWidth/4, y = screenHeight - wallThickness - 50, width = screenWidth/2, height = wallThickness}
     }
   
     -- Player settings - placed safely inside the box
@@ -27,7 +29,9 @@ function love.load()
       velocity = {x = 0, y = 0},
       grounded = false,
       coyoteTime = 0.15,         -- Time window where player can still jump after leaving ground
-      coyoteTimer = 0            -- Current coyote time counter
+      coyoteTimer = 0,            -- Current coyote time counter; prevents player from multi-jumping by spamming jump button
+      jBufferTime = 0.1,  -- Brief window to track consecutive jumps before hitting ground
+      jBufferTimer = 0 -- Buffer time
     }
     
     -- Physics settings
@@ -44,10 +48,20 @@ function love.load()
     
     -- Update coyote timer
     if player.grounded then
-      player.coyoteTimer = player.coyoteTime
+      player.coyoteTimer = player.coyoteTime -- Coyote timer is stopped
     else
       player.coyoteTimer = math.max(0, player.coyoteTimer - dt)
     end
+
+    if player.ground and player.jBufferTimer == 0 then -- on ground and buffer is active.
+      player.jBufferTimer = player.jBufferTime
+      -- jump here
+      player.velocity.y = player.jumpVelocity
+    else
+      -- update time
+      player.jBufferTimer = math.max(0, player.jBufferTimer - dt)
+    end
+
   end
   
   -- Draw all game elements
@@ -99,10 +113,12 @@ function love.load()
   
   -- Handle jumping on key press
   function love.keypressed(key)
-    if (key == "w" or key == "up") and (player.grounded or player.coyoteTimer > 0) then
+    if (key == "w" or key == "up" or key == "space") and (player.grounded or player.coyoteTimer > 0) then
       player.velocity.y = player.jumpVelocity
       player.grounded = false
       player.coyoteTimer = 0
+    else
+      player.jBufferTimer = 0 -- Buffer started
     end
     
     -- Restart the whole application when Ctrl+R is pressed
