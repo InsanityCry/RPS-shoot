@@ -1,10 +1,14 @@
 -- Load game resources and initialize
+local TileManager = require('tileManager')
+local LevelEditor = require('levelEditor')
+
 function love.load()
     -- Platform data - creating a box around the screen
     wallThickness = 20
     screenWidth = 800
     screenHeight = 600
     
+    -- Initialize default platforms (will be replaced by level data)
     platforms = {
       -- Bottom wall
       {x = 0, y = screenHeight - wallThickness, width = screenWidth, height = wallThickness},
@@ -35,46 +39,59 @@ function love.load()
     
     -- Debug flag
     debug = false
-  end
+
+    -- Initialize level editor
+    LevelEditor:init()
+end
   
-  -- Update game state
-  function love.update(dt)
-    updatePlayer(dt)
-    checkCollisions()
-    
-    -- Update coyote timer
-    if player.grounded then
-      player.coyoteTimer = player.coyoteTime
+-- Update game state
+function love.update(dt)
+    -- Update level editor if active
+    LevelEditor:update(dt)
+
+    -- Only update player if not in editor mode
+    if not LevelEditor.active then
+        updatePlayer(dt)
+        checkCollisions()
+        
+        -- Update coyote timer
+        if player.grounded then
+            player.coyoteTimer = player.coyoteTime
+        else
+            player.coyoteTimer = math.max(0, player.coyoteTimer - dt)
+        end
+    end
+end
+  
+-- Draw all game elements
+function love.draw()
+    if LevelEditor.active then
+        -- Draw level editor
+        LevelEditor:draw()
     else
-      player.coyoteTimer = math.max(0, player.coyoteTimer - dt)
+        -- Draw the current level if it exists
+        if LevelEditor.currentLevel then
+            TileManager:drawTilemap(LevelEditor.currentLevel)
+        end
+
+        -- Draw player
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.rectangle("fill", player.x, player.y, player.width, player.height)
+        
+        -- Debug info
+        if debug then
+            love.graphics.setColor(1, 1, 0)
+            love.graphics.print("Grounded: " .. tostring(player.grounded), 10, 10)
+            love.graphics.print("Coyote Timer: " .. string.format("%.2f", player.coyoteTimer), 10, 30)
+        end
     end
-  end
+end
   
-  -- Draw all game elements
-  function love.draw()
-    -- Draw player
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.rectangle("fill", player.x, player.y, player.width, player.height)
-    
-    -- Draw platforms
-    love.graphics.setColor(0.5, 0.5, 0.5)
-    for _, platform in ipairs(platforms) do
-      love.graphics.rectangle("fill", platform.x, platform.y, platform.width, platform.height)
-    end
-    
-    -- Debug info
-    if debug then
-      love.graphics.setColor(1, 1, 0)
-      love.graphics.print("Grounded: " .. tostring(player.grounded), 10, 10)
-      love.graphics.print("Coyote Timer: " .. string.format("%.2f", player.coyoteTimer), 10, 30)
-    end
-  end
-  
-  -- Update player position and handle input
-  function updatePlayer(dt)
+-- Update player position and handle input
+function updatePlayer(dt)
     -- Apply gravity
     if not player.grounded then
-      player.velocity.y = player.velocity.y + gravity * dt
+        player.velocity.y = player.velocity.y + gravity * dt
     end
     
     -- Reset horizontal velocity
@@ -82,11 +99,11 @@ function love.load()
     
     -- Handle keyboard input - support both arrow keys and WASD
     if love.keyboard.isDown("left") or love.keyboard.isDown("a") then
-      player.velocity.x = -player.speed
+        player.velocity.x = -player.speed
     end
     
     if love.keyboard.isDown("right") or love.keyboard.isDown("d") then
-      player.velocity.x = player.speed
+        player.velocity.x = player.speed
     end
     
     -- Update player position
@@ -95,93 +112,153 @@ function love.load()
     
     -- Reset grounded state
     player.grounded = false
-  end
+end
   
-  -- Handle jumping on key press
-  function love.keypressed(key)
+-- Handle jumping on key press
+function love.keypressed(key)
+    -- Toggle level editor with Tab
+    if key == "tab" then
+        LevelEditor:toggle()
+        return
+    end
+
+    -- Pass keypressed events to level editor if active
+    if LevelEditor.active then
+        LevelEditor:keypressed(key)
+        return
+    end
+
     if (key == "w" or key == "up") and (player.grounded or player.coyoteTimer > 0) then
-      player.velocity.y = player.jumpVelocity
-      player.grounded = false
-      player.coyoteTimer = 0
+        player.velocity.y = player.jumpVelocity
+        player.grounded = false
+        player.coyoteTimer = 0
     end
     
     -- Restart the whole application when Ctrl+R is pressed
     if key == "r" and love.keyboard.isDown("lctrl", "rctrl") then
-      love.event.quit("restart")
+        love.event.quit("restart")
     end
     
     -- Toggle debug mode with F1
     if key == "f1" then
-      debug = not debug
+        debug = not debug
     end
-  end
+end
   
-  -- Check for collisions between player and platforms
-  function checkCollisions()
+-- Check for collisions between player and level tiles
+function checkCollisions()
     local wasGrounded = player.grounded
     player.grounded = false
     
-    for _, platform in ipairs(platforms) do
-      -- Predict next position
-      local nextX = player.x + player.velocity.x * 0.01
-      local nextY = player.y + player.velocity.y * 0.01
-      
-      -- Only check for collision if we're moving toward the platform
-      local checkHorizontal = (player.velocity.x > 0 and player.x + player.width <= platform.x and nextX + player.width > platform.x) or
-                             (player.velocity.x < 0 and player.x >= platform.x + platform.width and nextX < platform.x + platform.width)
-      
-      local checkVertical = (player.velocity.y > 0 and player.y + player.height <= platform.y and nextY + player.height > platform.y) or
-                            (player.velocity.y < 0 and player.y >= platform.y + platform.height and nextY < platform.y + platform.height)
-      
-      -- Check for current collision
-      if player.x + player.width > platform.x and
-         player.x < platform.x + platform.width and
-         player.y + player.height > platform.y and
-         player.y < platform.y + platform.height then
-         
-        -- Handle collision based on direction
-        local overlapX = math.min(player.x + player.width - platform.x, platform.x + platform.width - player.x)
-        local overlapY = math.min(player.y + player.height - platform.y, platform.y + platform.height - player.y)
+    -- Check collisions with level tiles if a level is loaded
+    if LevelEditor.currentLevel then
+        local level = LevelEditor.currentLevel
+        local tileSize = TileManager.tileSize
         
-        -- Resolve collision (simpler approach)
-        if overlapX < overlapY and (checkHorizontal or math.abs(player.velocity.x) > 0) then
-          -- Horizontal collision
-          if player.x < platform.x then
-            player.x = platform.x - player.width
-          else
-            player.x = platform.x + platform.width
-          end
-          player.velocity.x = 0
-        elseif overlapY < overlapX and (checkVertical or math.abs(player.velocity.y) > 0) then
-          -- Vertical collision
-          if player.y < platform.y then
-            -- Landing on top of platform
-            player.y = platform.y - player.height
-            player.velocity.y = 0
-            player.grounded = true
-          else
-            -- Hitting bottom of platform
-            player.y = platform.y + platform.height
-            player.velocity.y = 0
-          end
+        -- Calculate the tiles the player might be colliding with
+        local startX = math.floor(player.x / tileSize) + 1
+        local endX = math.floor((player.x + player.width) / tileSize) + 1
+        local startY = math.floor(player.y / tileSize) + 1
+        local endY = math.floor((player.y + player.height) / tileSize) + 1
+        
+        for y = startY, endY do
+            for x = startX, endX do
+                local tile = TileManager:getTile(level, x, y)
+                if tile == TileManager.tileTypes.WALL or tile == TileManager.tileTypes.PLATFORM then
+                    local tileX = (x - 1) * tileSize
+                    local tileY = (y - 1) * tileSize
+                    
+                    -- Check for collision
+                    if player.x + player.width > tileX and
+                       player.x < tileX + tileSize and
+                       player.y + player.height > tileY and
+                       player.y < tileY + tileSize then
+                        
+                        -- Calculate overlap
+                        local overlapX = math.min(player.x + player.width - tileX, tileX + tileSize - player.x)
+                        local overlapY = math.min(player.y + player.height - tileY, tileY + tileSize - player.y)
+                        
+                        -- Resolve collision
+                        if overlapX < overlapY then
+                            -- Horizontal collision
+                            if player.x < tileX then
+                                player.x = tileX - player.width
+                            else
+                                player.x = tileX + tileSize
+                            end
+                            player.velocity.x = 0
+                        else
+                            -- Vertical collision
+                            if player.y < tileY then
+                                -- Landing on top
+                                player.y = tileY - player.height
+                                player.velocity.y = 0
+                                player.grounded = true
+                            else
+                                -- Hitting bottom
+                                player.y = tileY + tileSize
+                                player.velocity.y = 0
+                            end
+                        end
+                    end
+                end
+            end
         end
-      end
+    end
+    
+    -- Also check collisions with the default platforms if no level is loaded
+    if not LevelEditor.currentLevel then
+        for _, platform in ipairs(platforms) do
+            if player.x + player.width > platform.x and
+               player.x < platform.x + platform.width and
+               player.y + player.height > platform.y and
+               player.y < platform.y + platform.height then
+                
+                local overlapX = math.min(player.x + player.width - platform.x, platform.x + platform.width - player.x)
+                local overlapY = math.min(player.y + player.height - platform.y, platform.y + platform.height - player.y)
+                
+                if overlapX < overlapY then
+                    -- Horizontal collision
+                    if player.x < platform.x then
+                        player.x = platform.x - player.width
+                    else
+                        player.x = platform.x + platform.width
+                    end
+                    player.velocity.x = 0
+                else
+                    -- Vertical collision
+                    if player.y < platform.y then
+                        player.y = platform.y - player.height
+                        player.velocity.y = 0
+                        player.grounded = true
+                    else
+                        player.y = platform.y + platform.height
+                        player.velocity.y = 0
+                    end
+                end
+            end
+        end
     end
     
     -- Play landing sound effect
     if not wasGrounded and player.grounded then
-      -- Add sound effect
+        -- Add sound effect
     end
-  end
+end
   
-  -- Reset the game to initial state
-  function resetGame()
-    -- Reset player
-    player.x = screenWidth / 2 - 10
-    player.y = screenHeight / 2
+-- Reset the game to initial state
+function resetGame()
+    -- Reset player to spawn position if available, otherwise center
+    if LevelEditor.currentLevel and LevelEditor.currentLevel.playerSpawn then
+        player.x = LevelEditor.currentLevel.playerSpawn.x
+        player.y = LevelEditor.currentLevel.playerSpawn.y
+    else
+        player.x = screenWidth / 2 - 10
+        player.y = screenHeight / 2
+    end
+    
     player.velocity.x = 0
     player.velocity.y = 0
     player.grounded = false
-    
-    -- reset other game state here if needed
-  end 
+    player.coyoteTimer = 0
+end 
