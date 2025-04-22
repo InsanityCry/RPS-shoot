@@ -1,5 +1,6 @@
 -- Load game resources and initialize
 local TileManager = require('tileManager')
+
 local LevelEditor = require('levelEditor')
 
 function love.load()
