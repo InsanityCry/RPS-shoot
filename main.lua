@@ -145,6 +145,13 @@ function love.keypressed(key)
         debug = not debug
     end
 end
+
+-- Handle text input (for level name input)
+function love.textinput(text)
+    if LevelEditor.active then
+        LevelEditor:textinput(text)
+    end
+end
   
 -- Check for collisions between player and level tiles
 function checkCollisions()
@@ -249,17 +256,18 @@ end
   
 -- Reset the game to initial state
 function resetGame()
-    -- Reset player to spawn position if available, otherwise center
+    -- Reset player position to spawn point if a level is loaded
     if LevelEditor.currentLevel and LevelEditor.currentLevel.playerSpawn then
         player.x = LevelEditor.currentLevel.playerSpawn.x
         player.y = LevelEditor.currentLevel.playerSpawn.y
     else
+        -- Default position if no level is loaded
         player.x = screenWidth / 2 - 10
         player.y = screenHeight / 2
     end
     
+    -- Reset velocities
     player.velocity.x = 0
     player.velocity.y = 0
     player.grounded = false
-    player.coyoteTimer = 0
 end 
