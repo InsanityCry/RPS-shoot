@@ -195,7 +195,7 @@ function love.keypressed(key)
         return
     end
 
-    if (key == "w" or key == "up") and (player.grounded or player.coyoteTimer > 0) then
+    if (key == "w" or key == "up" or key == "space") and (player.grounded or player.coyoteTimer > 0) then
         player.velocity.y = player.jumpVelocity
         player.grounded = false
         player.coyoteTimer = 0
