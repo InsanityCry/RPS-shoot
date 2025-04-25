@@ -1,7 +1,8 @@
 -- Load game resources and initialize
 local TileManager = require('tileManager')
-
 local LevelEditor = require('levelEditor')
+local EnemyManager = require('enemyManager')
+local MainMenu = require('mainMenu')
 
 function love.load()
     -- Platform data - creating a box around the screen
@@ -32,7 +33,8 @@ function love.load()
       velocity = {x = 0, y = 0},
       grounded = false,
       coyoteTime = 0.15,         -- Time window where player can still jump after leaving ground
-      coyoteTimer = 0            -- Current coyote time counter
+      coyoteTimer = 0,           -- Current coyote time counter
+      isDead = false             -- Player death flag
     }
     
     -- Physics settings
@@ -43,29 +45,66 @@ function love.load()
 
     -- Initialize level editor
     LevelEditor:init()
+    
+    -- Initialize main menu
+    MainMenu:init()
+    
+    -- Initialize enemies from the level if one is loaded
+    if LevelEditor.currentLevel then
+        EnemyManager:initFromLevel(LevelEditor.currentLevel)
+    end
 end
   
 -- Update game state
 function love.update(dt)
+    -- Update main menu if active
+    if MainMenu.active then
+        MainMenu:update(dt)
+        return
+    end
+
     -- Update level editor if active
     LevelEditor:update(dt)
 
     -- Only update player if not in editor mode
     if not LevelEditor.active then
-        updatePlayer(dt)
-        checkCollisions()
-        
-        -- Update coyote timer
-        if player.grounded then
-            player.coyoteTimer = player.coyoteTime
+        if not player.isDead then
+            updatePlayer(dt)
+            checkCollisions()
+            
+            -- Update coyote timer
+            if player.grounded then
+                player.coyoteTimer = player.coyoteTime
+            else
+                player.coyoteTimer = math.max(0, player.coyoteTimer - dt)
+            end
+            
+            -- Update enemies
+            EnemyManager:update(dt, player, LevelEditor.currentLevel)
+            
+            -- Check if player collides with any enemy
+            if EnemyManager:checkPlayerCollision(player) then
+                player.isDead = true
+                -- You could add a death animation or sound here
+            end
         else
-            player.coyoteTimer = math.max(0, player.coyoteTimer - dt)
+            -- Player is dead - show death message and option to restart
+            if love.keyboard.isDown("r") then
+                -- Reset the game
+                resetGame()
+            end
         end
     end
 end
   
 -- Draw all game elements
 function love.draw()
+    -- Draw main menu if active
+    if MainMenu.active then
+        MainMenu:draw()
+        return
+    end
+
     if LevelEditor.active then
         -- Draw level editor
         LevelEditor:draw()
@@ -75,9 +114,20 @@ function love.draw()
             TileManager:drawTilemap(LevelEditor.currentLevel)
         end
 
-        -- Draw player
-        love.graphics.setColor(1, 1, 1)
-        love.graphics.rectangle("fill", player.x, player.y, player.width, player.height)
+        -- Draw enemies
+        EnemyManager:draw()
+
+        -- Draw player if not dead
+        if not player.isDead then
+            love.graphics.setColor(1, 1, 1)
+            love.graphics.rectangle("fill", player.x, player.y, player.width, player.height)
+        else
+            -- Draw death message
+            love.graphics.setColor(1, 0, 0)
+            love.graphics.print("You died! Press 'R' to restart", 
+                love.graphics.getWidth() / 2 - 100, 
+                love.graphics.getHeight() / 2)
+        end
         
         -- Debug info
         if debug then
@@ -85,6 +135,10 @@ function love.draw()
             love.graphics.print("Grounded: " .. tostring(player.grounded), 10, 10)
             love.graphics.print("Coyote Timer: " .. string.format("%.2f", player.coyoteTimer), 10, 30)
         end
+        
+        -- Draw pause menu hint
+        love.graphics.setColor(0.8, 0.8, 0.8)
+        love.graphics.print("Press ESC for Menu", 10, love.graphics.getHeight() - 20)
     end
 end
   
@@ -117,9 +171,21 @@ end
   
 -- Handle jumping on key press
 function love.keypressed(key)
+    -- Check for main menu key presses
+    if MainMenu.active then
+        MainMenu:keypressed(key)
+        return
+    end
+
     -- Toggle level editor with Tab
     if key == "tab" then
         LevelEditor:toggle()
+        return
+    end
+    
+    -- Return to main menu with Escape (when not in editor)
+    if key == "escape" and not LevelEditor.active then
+        MainMenu:show()
         return
     end
 
@@ -270,4 +336,10 @@ function resetGame()
     player.velocity.x = 0
     player.velocity.y = 0
     player.grounded = false
+    player.isDead = false
+    
+    -- Reinitialize enemies from the level
+    if LevelEditor.currentLevel then
+        EnemyManager:initFromLevel(LevelEditor.currentLevel)
+    end
 end 

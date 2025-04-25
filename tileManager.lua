@@ -10,6 +10,7 @@ TileManager.tileTypes = {
     WALL = 1,
     PLATFORM = 2,
     SPIKE = 3,
+    ENEMY = 4,
     -- Add more tile types as needed
 }
 
@@ -65,6 +66,10 @@ function TileManager:drawTilemap(tilemap)
             elseif tile == self.tileTypes.SPIKE then
                 love.graphics.setColor(1, 0, 0)
                 love.graphics.rectangle("fill", screenX, screenY, self.tileSize, self.tileSize)
+            elseif tile == self.tileTypes.ENEMY then
+                -- Draw enemy as a red circle
+                love.graphics.setColor(0.8, 0.2, 0.2)
+                love.graphics.circle("fill", screenX + self.tileSize/2, screenY + self.tileSize/2, self.tileSize/2 - 2)
             end
         end
     end

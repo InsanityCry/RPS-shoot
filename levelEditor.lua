@@ -3,7 +3,7 @@ local LevelEditor = {
     currentTileType = 1,
     gridSize = 32,
     camera = {x = 0, y = 0},
-    mode = "tile",  -- "tile", "player" or "menu"
+    mode = "tile",  -- "tile", "player" or "menu" or "enemy"
     playerSpawn = {x = 400, y = 300},  -- Default center of screen
     -- Add notification system
     notification = {
@@ -79,6 +79,21 @@ function LevelEditor:update(dt)
         local gridX = math.floor(mouseX / self.gridSize) * self.gridSize
         local gridY = math.floor(mouseY / self.gridSize) * self.gridSize
         self.currentLevel.playerSpawn = {x = gridX, y = gridY}
+    elseif self.mode == "enemy" then
+        if love.mouse.isDown(1) then  -- Left click to place enemy
+            local tileX = math.floor(mouseX / self.gridSize) + 1
+            local tileY = math.floor(mouseY / self.gridSize) + 1
+            
+            TileManager:setTile(self.currentLevel, tileX, tileY, TileManager.tileTypes.ENEMY)
+        elseif love.mouse.isDown(2) then  -- Right click to remove enemy
+            local tileX = math.floor(mouseX / self.gridSize) + 1
+            local tileY = math.floor(mouseY / self.gridSize) + 1
+            
+            -- Only remove if it's an enemy
+            if TileManager:getTile(self.currentLevel, tileX, tileY) == TileManager.tileTypes.ENEMY then
+                TileManager:setTile(self.currentLevel, tileX, tileY, TileManager.tileTypes.EMPTY)
+            end
+        end
     end
 end
 
@@ -116,12 +131,15 @@ function LevelEditor:draw()
             love.graphics.print("Current Tile: " .. self.currentTileType, 10, 30)
             love.graphics.print("Left Click: Place Tile", 10, 50)
             love.graphics.print("Right Click: Remove Tile", 10, 70)
-            love.graphics.print("1-4: Select Tile Type", 10, 90)
-        else
+            love.graphics.print("1-5: Select Tile Type", 10, 90)
+        elseif self.mode == "player" then
             love.graphics.print("Left Click: Place Player Spawn", 10, 30)
+        elseif self.mode == "enemy" then
+            love.graphics.print("Left Click: Place Enemy", 10, 30)
+            love.graphics.print("Right Click: Remove Enemy", 10, 50)
         end
         
-        love.graphics.print("Space: Toggle Tile/Player Mode", 10, 110)
+        love.graphics.print("Space: Cycle Modes (Tile/Player/Enemy)", 10, 110)
         love.graphics.print("S: Save Level", 10, 130)
         love.graphics.print("L: Load Level", 10, 150)
         love.graphics.print("D: Delete Level", 10, 170)
@@ -254,14 +272,20 @@ function LevelEditor:keypressed(key)
             return
         end
     else
-        -- Toggle between tile and player placement modes
+        -- Toggle between tile, player placement, and enemy placement modes
         if key == "space" then
-            self.mode = self.mode == "tile" and "player" or "tile"
+            if self.mode == "tile" then
+                self.mode = "player"
+            elseif self.mode == "player" then
+                self.mode = "enemy"
+            else
+                self.mode = "tile"
+            end
             return
         end
         
         -- Tile selection only in tile mode
-        if self.mode == "tile" and key >= "1" and key <= "4" then
+        if self.mode == "tile" and key >= "1" and key <= "5" then
             self.currentTileType = tonumber(key)
             return
         end
