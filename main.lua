@@ -34,7 +34,8 @@ function love.load()
       grounded = false,
       coyoteTime = 0.15,         -- Time window where player can still jump after leaving ground
       coyoteTimer = 0,           -- Current coyote time counter
-      isDead = false             -- Player death flag
+      isDead = false,             -- Player death flag
+      mode = 'r'
     }
     
     -- Physics settings
@@ -84,7 +85,8 @@ function love.update(dt)
             
             -- Check if player collides with any enemy
             if EnemyManager:checkPlayerCollision(player) then
-                player.isDead = true
+                -- if player.mode = "s" then
+                    player.isDead = true
                 -- You could add a death animation or sound here
             end
         else
@@ -94,6 +96,37 @@ function love.update(dt)
                 resetGame()
             end
         end
+    end
+end
+
+function RPS(playerMode, enemyMode) -- player is kill? if false, enemy dies
+    if playerMode == enemyMode then
+        return true -- theoretically, they just bump into each other.
+    end
+    if playerMode == 'r' then
+        if enemyMode == 'p' then
+            return true
+        end
+        if enemyMode == 's' then
+            return false
+        end
+    if playerMode == 'p' then
+        if enemyMode == 'r' then
+            return false
+        end
+        if enemyMode == 's' then
+            return true
+        end
+    end
+    if playerMode == 's' then
+        if enemyMode == 'r' then
+            return true
+        end
+        if enemyMode == 'p' then
+            return false
+        end
+    end
+
     end
 end
   
